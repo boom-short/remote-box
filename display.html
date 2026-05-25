@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ডিসপ্লে স্ক্রিন</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: white; padding: 20px; }
+        .box-container {
+            width: 320px;
+            height: 320px;
+            border: 4px solid #fff;
+            margin: 40px auto;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+        }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+
+    <h2>ডিসপ্লে ফোন (ফোন ২)</h2>
+    <p>কন্ট্রোল ফোন থেকে কমান্ডের অপেক্ষায়...</p>
+
+    <div class="box-container">
+        <iframe id="displayBox" src="about:blank"></iframe>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('displayBox');
+        
+        // ⚠️ আপনার ফায়ারবেস ডাটাবেজ লিংকটি নিচে বসান (শেষে /boxData.json অবশ্যই রাখবেন)
+        const databaseURL = "https://YOUR_DATABASE_URL_HERE.firebaseio.com/boxData.json";
+
+        // বক্সের ভেতরের ডিজাইন পরিবর্তন করার ফাংশন
+        function updateBox(content) {
+            let style = "display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family:Arial; font-weight:bold;";
+            
+            if (content === 'Clear' || content === null || content === "") {
+                style += "background-color:white;";
+                content = ""; 
+            } else if (content === 'Red') { 
+                style += "background-color:red; color:white; font-size:40px;"; 
+            } else if (content === 'Green') { 
+                style += "background-color:green; color:white; font-size:40px;"; 
+            } else if (content === 'Big') { 
+                style += "font-size:60px; color:#333; background-color:white;"; 
+            } else if (content === 'Small') { 
+                style += "font-size:18px; color:#666; background-color:white;"; 
+            } else { 
+                // যেকোনো সংখ্যার জন্য স্টাইল
+                style += "font-size:50px; color:#222; background-color:#e0f7fa;"; 
+            }
+
+            const htmlContent = `<body style="${style}"><div>${content}</div></body>`;
+            iframe.srcdoc = htmlContent;
+        }
+
+        // ডাটাবেজে কোনো পরিবর্তন হচ্ছে কিনা তা প্রতি সেকেন্ডে চেক করার ফাংশন (Polling)
+        function checkUpdates() {
+            fetch(databaseURL)
+            .then(response => response.json())
+            .then(data => {
+                if(data && data.currentDisplay) {
+                    updateBox(data.currentDisplay);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        // প্রতি ১ সেকেন্ড (১০০০ মিলিসেকেন্ড) পর পর ডাটাবেজ চেক করবে
+        setInterval(checkUpdates, 1000);
+        
+        // শুরুতে স্ক্রিন খালি রাখবে
+        updateBox('Clear');
+    </script>
+</body>
+</html>
