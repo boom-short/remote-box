@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>রিমোট কন্ট্রোল প্যানেল</title>
+    <title>রিমোট কন্ট্রোল</title>
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px; }
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px; user-select: none; }
         .controls { margin: 15px 0; padding: 15px; background: #fff; display: inline-block; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        button { padding: 12px 20px; margin: 5px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 4px; }
-        .clear-btn { background-color: #ff4d4d; color: white; border: none; font-weight: bold; }
-        input { padding: 10px; font-size: 16px; width: 120px; text-align: center; }
+        button { padding: 12px 20px; margin: 5px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 4px; font-weight: bold; }
+        button:active { background-color: #e0e0e0; }
+        .clear-btn { background-color: #ff4d4d; color: white; border: none; }
+        .clear-btn:active { background-color: #cc0000; }
+        input { padding: 10px; font-size: 16px; width: 140px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -19,7 +22,7 @@
     <div class="controls">
         <p><strong>লেখা পাঠান:</strong></p>
         <button onclick="sendData('Big')">Big</button>
-        <button onclick="sendData('Small') font-size: 14px;">Small</button>
+        <button onclick="sendData('Small')">Small</button>
         <button onclick="sendData('Red')">Red</button>
         <button onclick="sendData('Green')">Green</button>
         <button class="clear-btn" onclick="sendData('Clear')">Clear (সাদা করুন)</button>
@@ -28,32 +31,49 @@
     <br>
 
     <div class="controls">
-        <p><strong>সংখ্যা পাঠান:</strong></p>
+        <p><strong>যেকোনো সংখ্যা লিখুন:</strong></p>
         <input type="number" id="numInput" placeholder="উদা: 197" oninput="sendNumber()">
+        <button onclick="clearNumber()" style="padding: 10px 15px; margin-left: 5px; background-color: #bbb; color: white; border: none;">X</button>
     </div>
 
     <script>
-        // ⚠️ আপনার ফায়ারবেস ডাটাবেজ লিংকটি নিচে বসান (শেষে /boxData.json অবশ্যই রাখবেন)
-        const databaseURL = "https://YOUR_DATABASE_URL_HERE.firebaseio.com/boxData.json";
+        // আপনার স্ক্রিনশট থেকে পাওয়া সঠিক Keys এখানে বসানো হয়েছে
+        const pubnub = new PubNub({
+            publishKey: "pub-c-f62a643f-d9aa-46b4-a8c8-fbf224f87630",
+            subscribeKey: "sub-c-9c560f6f-7bfe-44b6-99c7-2dc044dd5ab1",
+            userId: "control-phone-user"
+        });
 
-        // ডাটাবেজে তথ্য পাঠানোর ফাংশন
+        // ডিসপ্লে ফোনে ডাটা পাঠানোর ফাংশন
         function sendData(value) {
-            fetch(databaseURL, {
-                method: "PUT",
-                body: JSON.stringify({ currentDisplay: value })
-            })
-            .then(response => console.log("পাঠানো হয়েছে:", value))
-            .catch(error => console.error("Error:", error));
+            pubnub.publish({
+                channel: "remote_box_channel",
+                message: { displayValue: value }
+            }, function(status, response) {
+                if (status.error) {
+                    console.log("ডাটা পাঠাতে সমস্যা হয়েছে:", status);
+                } else {
+                    console.log("সফলভাবে পাঠানো হয়েছে:", value);
+                }
+            });
         }
 
+        // সংখ্যা টাইপ করার সাথে সাথে ডাটা যাবে
         function sendNumber() {
             const val = document.getElementById('numInput').value;
-            if(val !== "") {
-                sendData(val);
-            } else {
-                sendData('Clear');
+            if(val !== "") { 
+                sendData(val); 
+            } else { 
+                sendData('Clear'); 
             }
+        }
+
+        // ইনপুট বক্সের সংখ্যা মুছে স্ক্রিন সাদা করার জন্য
+        function clearNumber() {
+            document.getElementById('numInput').value = "";
+            sendData('Clear');
         }
     </script>
 </body>
 </html>
+
