@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ডিসপ্লে স্ক্রিন</title>
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: white; padding: 20px; }
+        /* চারকোনা বক্সের মূল ফ্রেম */
         .box-container {
             width: 320px;
             height: 320px;
@@ -14,7 +16,7 @@
             background-color: #fff;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(255,255,255,0.3);
         }
         iframe { width: 100%; height: 100%; border: none; }
     </style>
@@ -22,7 +24,7 @@
 <body>
 
     <h2>ডিসপ্লে ফোন (ফোন ২)</h2>
-    <p>কন্ট্রোল ফোন থেকে কমান্ডের অপেক্ষায়...</p>
+    <p>কন্ট্রোল ফোনের সিগন্যালের অপেক্ষায়...</p>
 
     <div class="box-container">
         <iframe id="displayBox" src="about:blank"></iframe>
@@ -31,49 +33,49 @@
     <script>
         const iframe = document.getElementById('displayBox');
         
-        // ⚠️ আপনার ফায়ারবেস ডাটাবেজ লিংকটি নিচে বসান (শেষে /boxData.json অবশ্যই রাখবেন)
-        const databaseURL = "https://YOUR_DATABASE_URL_HERE.firebaseio.com/boxData.json";
+        // আপনার স্ক্রিনশট থেকে পাওয়া সঠিক Keys এখানেও বসানো হয়েছে
+        const pubnub = new PubNub({
+            subscribeKey: "sub-c-9c560f6f-7bfe-44b6-99c7-2dc044dd5ab1",
+            userId: "display-phone-user"
+        });
 
-        // বক্সের ভেতরের ডিজাইন পরিবর্তন করার ফাংশন
+        // বক্সের ভেতরের দৃশ্য পরিবর্তনের ফাংশন
         function updateBox(content) {
-            let style = "display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family:Arial; font-weight:bold;";
+            let style = "display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family:Arial; font-weight:bold; transition: background-color 0.3s;";
             
-            if (content === 'Clear' || content === null || content === "") {
-                style += "background-color:white;";
+            if (content === 'Clear' || content === "" || content === null) {
+                style += "background-color:white;"; 
                 content = ""; 
             } else if (content === 'Red') { 
-                style += "background-color:red; color:white; font-size:40px;"; 
+                style += "background-color:red; color:white; font-size:45px;"; 
             } else if (content === 'Green') { 
-                style += "background-color:green; color:white; font-size:40px;"; 
+                style += "background-color:green; color:white; font-size:45px;"; 
             } else if (content === 'Big') { 
-                style += "font-size:60px; color:#333; background-color:white;"; 
+                style += "font-size:65px; color:#333; background-color:white;"; 
             } else if (content === 'Small') { 
                 style += "font-size:18px; color:#666; background-color:white;"; 
             } else { 
-                // যেকোনো সংখ্যার জন্য স্টাইল
-                style += "font-size:50px; color:#222; background-color:#e0f7fa;"; 
+                // যেকোনো সংখ্যার জন্য সুন্দর হালকা নীল ব্যাকগ্রাউন্ড ও বড় ফ্রন্ট
+                style += "font-size:55px; color:#111; background-color:#e0f7fa; word-break: break-all; padding: 10px; text-align: center;"; 
             }
 
-            const htmlContent = `<body style="${style}"><div>${content}</div></body>`;
-            iframe.srcdoc = htmlContent;
+            // iframe-এর ভেতর লাইভ HTML তৈরি করা হচ্ছে
+            iframe.srcdoc = `<body style="${style}"><div>${content}</div></body>`;
         }
 
-        // ডাটাবেজে কোনো পরিবর্তন হচ্ছে কিনা তা প্রতি সেকেন্ডে চেক করার ফাংশন (Polling)
-        function checkUpdates() {
-            fetch(databaseURL)
-            .then(response => response.json())
-            .then(data => {
-                if(data && data.currentDisplay) {
-                    updateBox(data.currentDisplay);
+        // কন্ট্রোল ফোন থেকে আসা মেসেজ শোনার লিসেনার
+        pubnub.addListener({
+            message: function(event) {
+                if(event.message && event.message.displayValue !== undefined) {
+                    updateBox(event.message.displayValue);
                 }
-            })
-            .catch(error => console.error("Error:", error));
-        }
+            }
+        });
 
-        // প্রতি ১ সেকেন্ড (১০০০ মিলিসেকেন্ড) পর পর ডাটাবেজ চেক করবে
-        setInterval(checkUpdates, 1000);
+        // নির্দিষ্ট চ্যানেলটি কানেক্ট করা
+        pubnub.subscribe({ channels: ["remote_box_channel"] });
         
-        // শুরুতে স্ক্রিন খালি রাখবে
+        // শুরুতে স্ক্রিন একদম সাদা এবং খালি রাখবে
         updateBox('Clear');
     </script>
 </body>
